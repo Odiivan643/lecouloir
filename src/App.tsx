@@ -48,7 +48,7 @@ export default function App() {
       const saved = localStorage.getItem('lecouloir_cart');
       return saved ? JSON.parse(saved) : [
         // Seed default cart items matching Panier.png mockup
-        {
+        /*{
           product: INITIAL_PRODUCTS.find((p) => p.id === 'sac-easpark-noir') || INITIAL_PRODUCTS[1],
           quantity: 1,
           selectedColor: 'Noir',
@@ -57,7 +57,7 @@ export default function App() {
           product: INITIAL_PRODUCTS.find((p) => p.id === 'cahier-200p-simple') || INITIAL_PRODUCTS[2],
           quantity: 1,
           selectedColor: 'Noir',
-        },
+        },*/
       ];
     } catch {
       return [];
@@ -70,14 +70,14 @@ export default function App() {
       const saved = localStorage.getItem('lecouloir_user');
       return saved
         ? JSON.parse(saved)
-        : {
+        : null /*{
             firstName: 'Ivan',
             lastName: 'Odi',
             email: 'ivanodi643@gmail.com',
             phone: '+225 01 02 03 04 05',
             city: 'Abidjan - Cocody',
             address: 'Boulevard Latrille, Résidence Harmonie',
-          };
+          }; */
     } catch {
       return null;
     }
