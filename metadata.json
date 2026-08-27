@@ -1,0 +1,6 @@
+{
+  "name": "LeCouloir",
+  "description": "Boutique en ligne de fournitures scolaires LeCouloir : cahiers, géométrie, arts créatifs, sacs et accessoires.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
