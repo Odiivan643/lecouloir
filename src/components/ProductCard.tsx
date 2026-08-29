@@ -30,11 +30,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       id={`product-card-${product.id}`}
     >
       {/* Visual Container */}
-      <div className="w-full bg-white rounded-xl border border-neutral-900/90 py-7 px-4 flex items-center justify-center relative overflow-hidden mb-3.5 group-hover:bg-neutral-50/60 transition-colors">
-        {/* Line art icon matching Acceuil.png */}
-        <div className="flex items-center justify-center w-full h-24">
-          <ProductIcon type={product.iconType} size={48} className="text-black stroke-[1.8]" />
-        </div>
+      <div className="w-full bg-neutral-100 rounded-xl border border-neutral-900/90 overflow-hidden mb-3.5 relative aspect-4/3 flex items-center justify-center">
+        {product.images && product.images[0] ? (
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full">
+            <ProductIcon type={product.iconType} size={48} className="text-black stroke-[1.8]" />
+          </div>
+        )}
       </div>
 
       {/* Product Information */}

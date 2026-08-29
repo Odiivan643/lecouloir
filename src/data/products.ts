@@ -222,8 +222,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       { label: 'Forme', value: 'Triangulaire ergonomique' },
     ],
     images: [
-      'https://images.unsplash.com/photo-1521193089946-7aa29d1fe776?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1521193089946-7aa29d1fe776?auto=format&fit=crop&w=800&q=80',    
     ],
     iconType: 'art',
     colorVariant: '24 Couleurs',
@@ -246,7 +246,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { label: 'Accessoires', value: 'Bague adaptateur crayon + étui de rechange' },
     ],
     images: [
-      'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1764948620467-2b08f6843dd6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y29tcGFzJTIwZyVDMyVBOW9tJUMzJUE5dHJpZXxlbnwwfHwwfHx8MA%3D%3D',
     ],
     iconType: 'geometry',
     colorVariant: 'Argenté',

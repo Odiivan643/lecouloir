@@ -7,12 +7,14 @@ interface OverlayMenuProps {
   onClose: () => void;
   onSelectCategory: (category: ProductCategory) => void;
   onOpenProfile: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const OverlayMenu: React.FC<OverlayMenuProps> = ({
   onClose,
   onSelectCategory,
   onOpenProfile,
+  onOpenAdmin,
 }) => {
   const menuItems: { label: string; category?: ProductCategory; action?: () => void }[] = [
     { label: 'Sacs', category: 'Sacs' },
@@ -22,6 +24,7 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
     { label: 'Arts creatifs', category: 'Arts creatifs' },
     { label: 'Ecriture', category: 'Ecriture' },
     { label: 'Consulter mon profil', action: onOpenProfile },
+    ...(onOpenAdmin ? [{ label: 'Espace Admin', action: onOpenAdmin }] : []),
   ];
 
   return (
@@ -38,7 +41,7 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
         </button>
       </div>
 
-      {/* Right-aligned Navigation Links matching Overlay.png */}
+      {/* Liens de navigation */}
       <div className="max-w-md md:max-w-xl mx-auto w-full px-8 py-10 flex flex-col items-end gap-6 flex-1 justify-center">
         {menuItems.map((item, idx) => (
           <button
@@ -59,7 +62,7 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
         ))}
       </div>
 
-      {/* Footer matching Overlay.png */}
+      {/* Footer */}
       <Footer />
     </div>
   );

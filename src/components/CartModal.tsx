@@ -71,9 +71,18 @@ export const CartModal: React.FC<CartModalProps> = ({
                   className="flex items-start gap-4 pt-4 first:pt-0"
                   id={`cart-item-${item.product.id}`}
                 >
-                  {/* Square Box Thumbnail with black border matching Panier.png */}
-                  <div className="w-20 h-20 shrink-0 border border-black rounded-lg flex items-center justify-center p-2 bg-white">
-                    <ProductIcon type={item.product.iconType} size={36} className="text-black stroke-[1.8]" />
+                  {/* Square Box Thumbnail with black border */}
+                  <div className="w-20 h-20 shrink-0 border border-black rounded-lg overflow-hidden flex items-center justify-center bg-neutral-100">
+                    {item.product.images && item.product.images[0] ? (
+                      <img
+                        src={item.product.images[0]}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <ProductIcon type={item.product.iconType} size={36} className="text-black stroke-[1.8]" />
+                    )}
                   </div>
 
                   {/* Item Details */}

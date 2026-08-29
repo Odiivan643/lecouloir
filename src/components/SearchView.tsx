@@ -225,8 +225,17 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     onClick={() => onSelectProduct(prod)}
                     className="flex items-center gap-3.5 p-3 rounded-xl border border-neutral-200 hover:border-blue-500 transition-all cursor-pointer bg-white"
                   >
-                    <div className="w-16 h-16 rounded-lg bg-neutral-50 border border-neutral-200 flex items-center justify-center shrink-0">
-                      <ProductIcon type={prod.iconType} size={28} />
+                    <div className="w-16 h-16 rounded-lg bg-neutral-100 border border-neutral-200 overflow-hidden flex items-center justify-center shrink-0">
+                      {prod.images && prod.images[0] ? (
+                        <img
+                          src={prod.images[0]}
+                          alt={prod.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <ProductIcon type={prod.iconType} size={28} />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-sm text-black truncate">

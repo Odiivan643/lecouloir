@@ -20,6 +20,7 @@ import { OverlayMenu } from './components/OverlayMenu';
 import { FilterModal } from './components/FilterModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { Footer } from './components/Footer';
+import { AdminDashboard } from './components/AdminDashboard';
 
 const CATEGORIES: ProductCategory[] = [
   'Tous',
@@ -40,25 +41,27 @@ const DEFAULT_FILTERS: FilterOptions = {
 };
 
 export default function App() {
-  const [products] = useState<Product[]>(INITIAL_PRODUCTS);
+  // 1. État Admin (bien placé à l'intérieur du composant)
+  const [isAdminView, setIsAdminView] = useState<boolean>(false);
 
-  // Cart state with localStorage persistence
+  // 2. État des produits modifiables
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+
+  // 3. Catégories modifiables
+  const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([
+    { id: 'cahiers', label: 'Cahiers' },
+    { id: 'geometrie', label: 'Géométrie' },
+    { id: 'arts-creatifs', label: 'Arts créatifs' },
+    { id: 'sacs', label: 'Sacs' },
+    { id: 'ecriture', label: 'Écriture' },
+    { id: 'calculatrices', label: 'Calculatrices' },
+  ]);
+
+  // Cart state
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('lecouloir_cart');
-      return saved ? JSON.parse(saved) : [
-        // Seed default cart items matching Panier.png mockup
-        /*{
-          product: INITIAL_PRODUCTS.find((p) => p.id === 'sac-easpark-noir') || INITIAL_PRODUCTS[1],
-          quantity: 1,
-          selectedColor: 'Noir',
-        },
-        {
-          product: INITIAL_PRODUCTS.find((p) => p.id === 'cahier-200p-simple') || INITIAL_PRODUCTS[2],
-          quantity: 1,
-          selectedColor: 'Noir',
-        },*/
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -68,16 +71,7 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('lecouloir_user');
-      return saved
-        ? JSON.parse(saved)
-        : null /*{
-            firstName: 'Ivan',
-            lastName: 'Odi',
-            email: 'ivanodi643@gmail.com',
-            phone: '+225 01 02 03 04 05',
-            city: 'Abidjan - Cocody',
-            address: 'Boulevard Latrille, Résidence Harmonie',
-          }; */
+      return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
@@ -112,9 +106,7 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('lecouloir_cart', JSON.stringify(cart));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [cart]);
 
   // Sync user to localStorage
@@ -122,10 +114,10 @@ export default function App() {
     try {
       if (user) {
         localStorage.setItem('lecouloir_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('lecouloir_user');
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [user]);
 
   // Cart actions
@@ -143,7 +135,7 @@ export default function App() {
             : item
         );
       }
-      return [...prev, { product, quantity, selectedColor: product.colorVariant || 'Standard' }];
+      return [...prev, { product, quantity, selectedColor: (product as any).colorVariant || 'Standard' }];
     });
     triggerToast(`Ajouté au panier : ${product.name}`);
   };
@@ -168,11 +160,38 @@ export default function App() {
     setCart([]);
   };
 
+  // Admin Actions
+  const handleAddProduct = (newProduct: Product) => {
+    setProducts((prev) => [newProduct, ...prev]);
+    triggerToast(`Article "${newProduct.name}" ajouté !`);
+  };
+
+  const handleEditProduct = (updatedProduct: Product) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+    triggerToast(`Article "${updatedProduct.name}" mis à jour !`);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    triggerToast('Article supprimé.');
+  };
+
+  const handleAddCategory = (newCat: { id: string; label: string }) => {
+    setCategoryList((prev) => [...prev, newCat]);
+    triggerToast(`Catégorie "${newCat.label}" ajoutée !`);
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategoryList((prev) => prev.filter((c) => c.id !== categoryId));
+    triggerToast('Catégorie supprimée.');
+  };
+
   // Filtered and Sorted Products for Home
   const displayedProducts = useMemo(() => {
     let list = [...products];
 
-    // Filter by category
     const catToUse =
       filterOptions.category !== 'Tous'
         ? filterOptions.category
@@ -184,15 +203,12 @@ export default function App() {
       list = list.filter((p) => p.category === catToUse);
     }
 
-    // Filter by max price
     list = list.filter((p) => p.price <= filterOptions.maxPrice);
 
-    // In stock
     if (filterOptions.inStockOnly) {
       list = list.filter((p) => p.inStock);
     }
 
-    // Sorting
     if (filterOptions.sortBy === 'price-asc') {
       list.sort((a, b) => a.price - b.price);
     } else if (filterOptions.sortBy === 'price-desc') {
@@ -200,7 +216,6 @@ export default function App() {
     } else if (filterOptions.sortBy === 'rating') {
       list.sort((a, b) => b.rating - a.rating);
     } else {
-      // 'popular' first
       list.sort((a, b) => (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0));
     }
 
@@ -233,7 +248,6 @@ export default function App() {
     }
   };
 
-  // Determine active filter count
   const activeFilterCount =
     (filterOptions.category !== 'Tous' ? 1 : 0) +
     (filterOptions.maxPrice < 10000 ? 1 : 0) +
@@ -241,7 +255,7 @@ export default function App() {
     (filterOptions.inStockOnly ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-blue-600 selection:text-white font-['Poppins']">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg border border-neutral-800 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -250,8 +264,23 @@ export default function App() {
         </div>
       )}
 
-      {/* Main View Router */}
-      {activeView === 'search' ? (
+     
+
+      {/* VUE ADMIN */}
+      {isAdminView ? (
+        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6">
+          <AdminDashboard
+            products={products}
+            categories={categoryList}
+            onAddProduct={handleAddProduct}
+            onEditProduct={handleEditProduct}
+            onDeleteProduct={handleDeleteProduct}
+            onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onBackToStore={() => setIsAdminView(false)}
+          />
+        </div>
+      ) : activeView === 'search' ? (
         <SearchView
           products={products}
           onClose={() => setActiveView('home')}
@@ -286,7 +315,7 @@ export default function App() {
           }}
         />
       ) : (
-        /* HOME VIEW - Faithfully matching Acceuil.png */
+        /* VUE ACCUEIL CLIENT */
         <div className="flex-1 flex flex-col justify-between">
           <div>
             {/* Header */}
@@ -302,26 +331,21 @@ export default function App() {
               cartCount={totalCartCount}
             />
 
-            {/* Main Content Container matching Mobile & Responsive Width */}
             <main className="max-w-md md:max-w-4xl mx-auto px-4 pt-3 pb-8 space-y-4">
-              {/* Search Bar matching Acceuil.png */}
               <SearchBar
                 onSearchClick={() => setActiveView('search')}
                 onFilterClick={() => setShowFilterModal(true)}
                 activeFilterCount={activeFilterCount}
               />
 
-              {/* Horizontal Category Tabs matching Acceuil.png */}
               <CategoryTabs
                 categories={CATEGORIES}
                 selectedCategory={selectedCategory}
                 onSelectCategory={handleSelectCategory}
               />
 
-              {/* Trust & Reassurance Banner matching Acceuil.png */}
               <ReassuranceBanner />
 
-              {/* Section Header */}
               <div className="pt-2">
                 <div className="flex items-baseline justify-between mb-3">
                   <h2 className="text-lg md:text-xl font-bold text-black tracking-tight">
@@ -334,7 +358,6 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* Product Cards Grid matching Acceuil.png */}
                 {displayedProducts.length === 0 ? (
                   <div className="text-center py-16 bg-neutral-50 rounded-2xl border border-neutral-200 p-6">
                     <p className="text-sm font-semibold text-neutral-800 mb-2">
@@ -366,12 +389,26 @@ export default function App() {
             </main>
           </div>
 
-          {/* Black Footer matching Acceuil.png */}
           <Footer />
         </div>
       )}
+{/* Overlay Menu Drawer */}
+      {showOverlayMenu && (
+        <OverlayMenu
+          onClose={() => setShowOverlayMenu(false)}
+          onSelectCategory={handleSelectCategory}
+          onOpenProfile={() => {
+            setShowOverlayMenu(false);
+            handleProfileButtonClick();
+          }}
+          onOpenAdmin={() => {
+            setShowOverlayMenu(false);
+            setIsAdminView(true);
+          }}
+        />
+      )}
 
-      {/* Cart Modal matching Panier.png */}
+      {/* Cart Modal */}
       {showCartModal && (
         <CartModal
           items={cart}
@@ -385,7 +422,7 @@ export default function App() {
         />
       )}
 
-      {/* Auth Modal matching Insciption et connexion.png */}
+      {/* Auth Modal */}
       {showAuthModal && (
         <AuthModal
           currentUser={user}
@@ -394,18 +431,6 @@ export default function App() {
             setUser(loggedInUser);
             setShowAuthModal(false);
             triggerToast(`Bienvenue, ${loggedInUser.firstName} !`);
-          }}
-        />
-      )}
-
-      {/* Overlay Menu Drawer matching Overlay.png */}
-      {showOverlayMenu && (
-        <OverlayMenu
-          onClose={() => setShowOverlayMenu(false)}
-          onSelectCategory={handleSelectCategory}
-          onOpenProfile={() => {
-            setShowOverlayMenu(false);
-            handleProfileButtonClick();
           }}
         />
       )}
