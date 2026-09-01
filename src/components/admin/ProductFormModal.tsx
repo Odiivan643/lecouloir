@@ -30,9 +30,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setName(editingProduct.name);
       setSubtitle(editingProduct.subtitle || '');
       setPrice(String(editingProduct.price));
-      setStock(String(editingProduct.stockCount ?? 20));
+      setStock(String((editingProduct as any).stockCount ?? 20));
       setCategory(editingProduct.category);
-      setImageDataUrl(editingProduct.image || '');
+      setImageDataUrl((editingProduct as any).image || '');
     } else {
       setName('');
       setSubtitle('');
@@ -68,17 +68,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       imageDataUrl.trim() ||
       'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80';
 
-    const payload: Product = {
+    const payload: any = {
       id: editingProduct?.id || `prod-${Date.now()}`,
       name: name.trim(),
       subtitle: subtitle.trim() || 'Fourniture scolaire de qualité',
-      description: editingProduct?.description || 'Article de papeterie sélectionné pour les élèves et professionnels.',
+      description: (editingProduct as any)?.description || 'Article de papeterie sélectionné pour les élèves et professionnels.',
       price: Number(price),
       category: category as any,
       stockCount: Number(stock) || 0,
       inStock: (Number(stock) || 0) > 0,
       rating: editingProduct?.rating || 5.0,
-      reviewCount: editingProduct?.reviewCount || 1,
+      reviewCount: (editingProduct as any)?.reviewCount || 1,
       image: finalImage,
     };
 

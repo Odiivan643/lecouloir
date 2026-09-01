@@ -7,6 +7,7 @@ interface OverlayMenuProps {
   onClose: () => void;
   onSelectCategory: (category: ProductCategory) => void;
   onOpenProfile: () => void;
+  onOpenOrders?: () => void;
   onOpenAdmin?: () => void;
 }
 
@@ -14,6 +15,7 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
   onClose,
   onSelectCategory,
   onOpenProfile,
+  onOpenOrders,
   onOpenAdmin,
 }) => {
   const menuItems: { label: string; category?: ProductCategory; action?: () => void }[] = [
@@ -24,6 +26,7 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
     { label: 'Arts creatifs', category: 'Arts creatifs' },
     { label: 'Ecriture', category: 'Ecriture' },
     { label: 'Consulter mon profil', action: onOpenProfile },
+    ...(onOpenOrders ? [{ label: 'Mes commandes', action: onOpenOrders }] : []),
     ...(onOpenAdmin ? [{ label: 'Espace Admin', action: onOpenAdmin }] : []),
   ];
 

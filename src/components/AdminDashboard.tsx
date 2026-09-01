@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, FolderTree } from 'lucide-react';
 import { Product } from '../types';
 import { AdminSidebar, AdminTab } from './admin/AdminSidebar';
 import { ProductFormModal } from './admin/ProductFormModal';
 import { OrderDetailModal } from './admin/OrderDetailModal';
 import { OrdersTab, AdminOrder } from './admin/OrdersTab';
+import { fetchOrders, fetchAdminStats, updateOrderStatus as apiUpdateOrderStatus } from '../lib/api';
 
 export { type AdminOrder };
 
@@ -31,70 +32,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
-  // Commandes
-  const [orders, setOrders] = useState<AdminOrder[]>([
-    {
-      id: '#LC-1842',
-      customerName: 'Moussa Diop',
-      customerPhone: '+225 07 11 22 33 44',
-      customerEmail: 'moussa.diop@gmail.com',
-      date: "Aujourd'hui, 08:32",
-      total: 12500,
-      status: 'in_progress',
-      address: 'Cocody Riviera 3, Résidence Palmier Apt 4B',
-      paymentMethod: 'Paiement à la livraison (Espèces)',
-      items: [
-        {
-          id: 'kit-cahier',
-          name: 'Kit cahier 200 pages',
-          price: 500,
-          quantity: 5,
-          color: 'Bleu',
-          image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=80',
-        },
-        {
-          id: 'sac-easpark',
-          name: 'Sac à dos Easpark renforcé',
-          price: 8000,
-          quantity: 1,
-          color: 'Noir Carbone',
-          image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&auto=format&fit=crop&q=80',
-        },
-      ],
-    },
-    {
-      id: '#LC-1841',
-      customerName: 'Mariam Koné',
-      customerPhone: '+225 05 44 33 22 11',
-      customerEmail: 'mariam.kone@yahoo.fr',
-      date: 'Hier, 17:15',
-      total: 8400,
-      status: 'delivered',
-      address: 'Marcory Zone 4, Rue du 7 Décembre',
-      paymentMethod: 'Wave Money',
-      items: [
-        {
-          id: 'sac-easpark-rouge',
-          name: 'Sac Easpark ergonomique',
-          price: 8000,
-          quantity: 1,
-          color: 'Rouge',
-          image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&auto=format&fit=crop&q=80',
-        },
-      ],
-    },
-    {
-      id: '#LC-1840',
-      customerName: 'Alassane Diallo',
-      customerPhone: '+225 01 99 88 77 66',
-      date: '14 Jan, 10:05',
-      total: 35000,
-      status: 'cancelled',
-      address: 'Yopougon Maroc',
-      paymentMethod: 'Orange Money',
-      items: [],
-    },
-  ]);
+  // Commandes — plus de mocks, chargées depuis le backend
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [stats, setStats] = useState<{ ordersCount: number; revenue: number; productsCount: number; categoriesCount: number } | null>(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // Map backend order -> AdminOrder (front format)
+  const mapBackendOrder = (o: any): AdminOrder => ({
+    id: o.id,
+    customerName: o.customerName || `${o.customer_first_name || ''} ${o.customer_last_name || ''}`.trim(),
+    customerPhone: o.customerPhone || o.customer_phone || '',
+    customerEmail: o.customerEmail || o.customer_email || '',
+    date: o.date || o.createdAt || '',
+    total: o.total ?? o.subtotal ?? 0,
+    status: (o.status as any) || 'in_progress',
+    address: o.address || `${o.city || ''} ${o.deliveryAddress || ''}`.trim(),
+    paymentMethod: o.paymentMethod || o.payment_method || '',
+    items: (o.items || []).map((it: any) => ({
+      id: it.productId || it.product_id || it.id,
+      name: it.productName || it.product_name || it.name || '',
+      price: it.productPrice ?? it.product_price ?? it.price ?? 0,
+      quantity: it.quantity ?? 1,
+      color: it.selectedColor || it.selected_color || it.color,
+      image: it.image || it.image_snapshot || it.imageSnapshot,
+    })),
+  });
+
+  const refreshOrders = async () => {
+    setOrdersLoading(true);
+    setOrdersError(null);
+    try {
+      const res: any = await fetchOrders();
+      const items = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+      setOrders(items.map(mapBackendOrder));
+    } catch (e: any) {
+      setOrdersError(e.message || 'Impossible de charger les commandes.');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const refreshStats = async () => {
+    try {
+      const s: any = await fetchAdminStats();
+      setStats(s);
+    } catch {
+      // stats reste null -> fallback sur longueurs locales
+    }
+  };
+
+  useEffect(() => {
+    refreshOrders();
+    refreshStats();
+  }, []);
 
   // Modales
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -120,12 +111,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCatName('');
   };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: 'in_progress' | 'delivered' | 'cancelled') => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
-    );
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: 'in_progress' | 'delivered' | 'cancelled') => {
+    try {
+      const updated: any = await apiUpdateOrderStatus(orderId, newStatus);
+      const mapped = mapBackendOrder(updated);
+      setOrders((prev) => prev.map((ord) => (ord.id === orderId ? mapped : ord)));
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(mapped);
+      }
+      refreshStats();
+    } catch (e: any) {
+      // fallback optimiste si API down
+      setOrders((prev) => prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord)));
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
+      }
     }
   };
 
@@ -189,8 +189,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white p-4 sm:p-5 rounded-3xl border border-neutral-100 shadow-xs">
                 <p className="text-xs font-semibold text-neutral-500 mb-1">Revenus</p>
-                <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900">742K F</p>
-                <p className="text-[11px] text-neutral-400 mt-1 font-medium">+45K F cette sem.</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-neutral-900">
+                  {stats ? `${(stats.revenue / 1000).toFixed(0)}K F` : `${orders.reduce((s, o) => s + o.total, 0).toLocaleString()} F`}
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-1 font-medium">
+                  {stats ? `${stats.ordersCount} commandes` : 'Temps réel'}
+                </p>
               </div>
 
               <div className="bg-white p-4 sm:p-5 rounded-3xl border border-neutral-100 shadow-xs">
@@ -218,37 +222,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div className="space-y-2.5">
-                  {orders.map((o) => (
-                    <div
-                      key={o.id}
-                      onClick={() => setSelectedOrder(o)}
-                      className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50/70 hover:bg-blue-50/50 border border-neutral-100 transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            o.status === 'delivered' ? 'bg-emerald-500' : o.status === 'cancelled' ? 'bg-red-500' : 'bg-amber-500'
-                          }`}
-                        />
-                        <div>
-                          <p className="text-xs font-bold text-neutral-900">{o.id}</p>
-                          <p className="text-[11px] text-neutral-500">{o.customerName}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-neutral-900">{o.total.toLocaleString()} F</span>
-                      <span
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg ${
-                          o.status === 'delivered'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : o.status === 'cancelled'
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}
+                  {ordersLoading ? (
+                    <p className="text-xs text-neutral-500 py-4 text-center">Chargement des commandes…</p>
+                  ) : ordersError ? (
+                    <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{ordersError}</p>
+                  ) : orders.length === 0 ? (
+                    <p className="text-xs text-neutral-500 py-8 text-center border border-dashed border-neutral-200 rounded-2xl">
+                      Aucune commande pour le moment.
+                    </p>
+                  ) : (
+                    orders.map((o) => (
+                      <div
+                        key={o.id}
+                        onClick={() => setSelectedOrder(o)}
+                        className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50/70 hover:bg-blue-50/50 border border-neutral-100 transition-all cursor-pointer"
                       >
-                        {o.status === 'delivered' ? 'Livrée' : o.status === 'cancelled' ? 'Annulée' : 'En cours'}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              o.status === 'delivered' ? 'bg-emerald-500' : o.status === 'cancelled' ? 'bg-red-500' : 'bg-amber-500'
+                            }`}
+                          />
+                          <div>
+                            <p className="text-xs font-bold text-neutral-900">{o.id}</p>
+                            <p className="text-[11px] text-neutral-500">{o.customerName}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-neutral-900">{o.total.toLocaleString()} F</span>
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded-lg ${
+                            o.status === 'delivered'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : o.status === 'cancelled'
+                              ? 'bg-red-100 text-red-600'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {o.status === 'delivered' ? 'Livrée' : o.status === 'cancelled' ? 'Annulée' : 'En cours'}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -291,9 +305,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 border border-neutral-100"
                 >
                   <div className="flex items-center gap-3">
-                    <img src={p.image} alt={p.name} className="w-12 h-12 object-cover rounded-xl bg-neutral-200" />
+                    <img src={(p as any).images?.[0] || (p as any).image || ''} alt={p.name} className="w-12 h-12 object-cover rounded-xl bg-neutral-200" />
                     <div>
-                      <span className="text-[10px] font-bold text-blue-600 uppercase">{p.category}</span>
+                      <span className="text-[10px] font-bold text-blue-600 uppercase">{(p as any).category || (p as any).category_id}</span>
                       <h4 className="text-xs font-bold text-neutral-900">{p.name}</h4>
                       <p className="text-xs text-neutral-500 font-semibold">{p.price.toLocaleString()} FCFA</p>
                     </div>

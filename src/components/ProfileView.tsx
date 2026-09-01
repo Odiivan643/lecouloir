@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Check, LogOut } from 'lucide-react';
+import { ArrowLeft, Check, LogOut, Package } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface ProfileViewProps {
@@ -7,6 +7,7 @@ interface ProfileViewProps {
   onBack: () => void;
   onSave: (updated: UserProfile) => void;
   onLogout?: () => void;
+  onOpenOrders?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -14,6 +15,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onBack,
   onSave,
   onLogout,
+  onOpenOrders,
 }) => {
   const [firstName, setFirstName] = useState(user.firstName || '');
   const [lastName, setLastName] = useState(user.lastName || '');
@@ -115,6 +117,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               id="profile-phone-input"
             />
           </div>
+
+          {/* Accès commandes */}
+          {onOpenOrders && (
+            <button
+              type="button"
+              onClick={onOpenOrders}
+              className="w-full py-3.5 bg-white border border-neutral-900 hover:bg-neutral-50 text-neutral-900 font-bold text-sm rounded-xl flex items-center justify-center gap-2"
+            >
+              <Package className="w-5 h-5" /> Mes commandes
+            </button>
+          )}
 
           {/* Submit button matching Informations.png */}
           <div className="mt-auto pt-8 pb-4">

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { X, CheckCircle2, Truck, ShieldCheck, MapPin, Phone, User, MessageCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem, UserProfile } from '../types';
+import { createOrder } from '../lib/api';
 
 interface CheckoutModalProps {
   items: CartItem[];
   user: UserProfile | null;
   onClose: () => void;
   onOrderCompleted: () => void;
+  onViewOrders?: () => void;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -15,16 +17,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   user,
   onClose,
   onOrderCompleted,
+  onViewOrders,
 }) => {
   const [fullName, setFullName] = useState(
     user ? `${user.firstName} ${user.lastName}`.trim() : ''
   );
   const [phone, setPhone] = useState(user?.phone || '');
-  const [city, setCity] = useState('Abidjan (Cocody / Plateau / Yopougon)');
+  const [city, setCity] = useState('Abidjan - Cocody');
   const [deliveryAddress, setDeliveryAddress] = useState(user?.address || '');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'wave' | 'om' | 'momo'>('cod');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [serverTotal, setServerTotal] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const subtotal = items.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
@@ -33,23 +39,46 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const deliveryFee = subtotal > 15000 ? 0 : 1000;
   const total = subtotal + deliveryFee;
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !phone || !deliveryAddress) return;
-
-    const generatedId = `LC-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderId(generatedId);
-    setOrderPlaced(true);
-
+    if (!fullName || !phone || !deliveryAddress) {
+      setError('Veuillez remplir tous les champs requis.');
+      return;
+    }
+    if (items.length === 0) {
+      setError('Votre panier est vide.');
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
     try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#2563eb', '#3b82f6', '#10b981', '#f59e0b'],
+      const res: any = await createOrder({
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        city,
+        deliveryAddress: deliveryAddress.trim(),
+        paymentMethod,
+        items: items.map((it) => ({
+          productId: it.product.id,
+          quantity: it.quantity,
+          selectedColor: it.selectedColor,
+        })),
       });
-    } catch {
-      // ignore
+      setOrderId(res.id || res.orderId || `LC-${Date.now()}`);
+      setServerTotal(res.total ?? total);
+      setOrderPlaced(true);
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#2563eb', '#3b82f6', '#10b981', '#f59e0b'],
+        });
+      } catch {}
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la commande. Réessayez.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -58,10 +87,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     onClose();
   };
 
+  const displayTotal = serverTotal ?? total;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-lg rounded-3xl p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-        {/* Close Button */}
         {!orderPlaced && (
           <button
             onClick={onClose}
@@ -84,7 +114,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             <form onSubmit={handleSubmitOrder} className="space-y-4">
-              {/* Recipient Information */}
               <div className="space-y-3">
                 <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider block">
                   1. Vos coordonnées de livraison
@@ -165,7 +194,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Payment Method Selector */}
               <div className="pt-2">
                 <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider block mb-2">
                   2. Mode de règlement
@@ -221,7 +249,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Order Recap */}
               <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 text-xs space-y-1.5 mt-4">
                 <div className="flex justify-between text-neutral-600">
                   <span>Articles ({items.reduce((s, i) => s + i.quantity, 0)}) :</span>
@@ -244,18 +271,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {error && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 font-medium">
+                  {error}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer text-center"
+                disabled={submitting}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer text-center"
                 id="checkout-confirm-btn"
               >
-                Confirmer la commande ({total.toLocaleString('fr-FR')} FCFA)
+                {submitting ? 'Traitement...' : `Confirmer la commande (${total.toLocaleString('fr-FR')} FCFA)`}
               </button>
             </form>
           </div>
         ) : (
-          /* Confirmation Screen */
           <div className="text-center py-4">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-10 h-10" />
@@ -287,7 +319,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="flex flex-col gap-2.5">
               <a
                 href={`https://wa.me/2250102030405?text=${encodeURIComponent(
-                  `Bonjour LeCouloir, je confirme ma commande ${orderId} pour un montant de ${total} FCFA à l'attention de ${fullName}.`
+                  `Bonjour LeCouloir, je confirme ma commande ${orderId} pour un montant de ${displayTotal} FCFA à l'attention de ${fullName}.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -296,6 +328,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <MessageCircle className="w-4 h-4" />
                 Suivre ma commande sur WhatsApp
               </a>
+
+              {user && onViewOrders && (
+                <button
+                  onClick={() => {
+                    handleFinish();
+                    onViewOrders();
+                  }}
+                  className="w-full py-3 bg-white border border-neutral-900 text-neutral-900 font-bold text-xs rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  Voir mes commandes
+                </button>
+              )}
 
               <button
                 onClick={handleFinish}

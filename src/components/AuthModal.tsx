@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { UserProfile } from '../types';
+import { login, register } from '../lib/api';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -21,35 +22,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [lastName, setLastName] = useState(currentUser?.lastName || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [forgotSent, setForgotSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-
-    const user: UserProfile = {
-      firstName: firstName.trim() || (isRegister ? 'Client' : 'Jean'),
-      lastName: lastName.trim() || 'Kouassi',
-      email: email.trim(),
-      phone: phone.trim() || '+225 07 00 00 00 00',
-    };
-
-    onLoginSuccess(user);
-  };
-
-  const handleGoogleAuth = () => {
-    const googleUser: UserProfile = {
-      firstName: 'Ivan',
-      lastName: 'Odi',
-      email: 'ivanodi643@gmail.com',
-      phone: '+225 01 02 03 04 05',
-    };
-    onLoginSuccess(googleUser);
+    if (!email || !password) {
+      setError('Email et mot de passe requis.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      if (isRegister) {
+        if (!firstName.trim() || !lastName.trim()) {
+          setError('Prénom et nom requis pour créer un compte.');
+          setLoading(false);
+          return;
+        }
+        const res = await register({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          password,
+          phone: phone.trim() || undefined,
+        });
+        onLoginSuccess(res.user as UserProfile);
+      } else {
+        const res = await login({ email: email.trim(), password });
+        onLoginSuccess(res.user as UserProfile);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur d’authentification.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-3xl p-6 md:p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-1.5 text-neutral-400 hover:text-black transition-colors rounded-full"
@@ -59,7 +71,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X className="w-5 h-5 stroke-[2]" />
         </button>
 
-        {/* Title matching Insciption et connexion.png */}
         <div className="text-center mt-2 mb-8 px-2">
           <h2 className="text-lg md:text-xl font-bold text-black leading-snug">
             {isRegister
@@ -71,14 +82,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {isRegister && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <input
                   type="text"
-                  required
+                  required={isRegister}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Prénom"
@@ -88,7 +98,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div>
                 <input
                   type="text"
-                  required
+                  required={isRegister}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Nom"
@@ -98,7 +108,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* Email input */}
           <div>
             <input
               type="email"
@@ -123,7 +132,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* Password input with toggle eye */}
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -148,7 +156,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           </div>
 
-          {/* Forgot Password link */}
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 font-medium">
+              {error}
+            </p>
+          )}
+
           {!isRegister && (
             <div className="flex justify-between items-center text-xs text-neutral-600 pt-1">
               <span>Mot de passe oublié ?</span>
@@ -165,57 +178,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* Solid Blue Submit Button */}
           <button
             type="submit"
-            className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer text-center mt-3"
+            disabled={loading}
+            className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer text-center mt-3"
             id="auth-submit-btn"
           >
-            {isRegister ? 'Créer mon compte' : 'Se connecter'}
+            {loading ? 'Veuillez patienter...' : isRegister ? 'Créer mon compte' : 'Se connecter'}
           </button>
 
-          {/* Switch mode link */}
           <div className="text-center pt-1">
             <button
               type="button"
-              onClick={() => setIsRegister(!isRegister)}
+              onClick={() => {
+                setError(null);
+                setIsRegister(!isRegister);
+              }}
               className="text-xs text-black font-semibold underline hover:text-blue-600 transition-colors cursor-pointer"
               id="auth-toggle-mode-btn"
             >
               {isRegister
                 ? 'Vous avez déjà un compte ? Se connecter'
                 : "Vous n'avez pas de compte ? Créer un compte"}
-            </button>
-          </div>
-
-          {/* S'inscrire avec Google button */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              className="w-full py-3 px-4 bg-[#e3e3e3] hover:bg-[#d8d8d8] text-black font-bold text-xs md:text-sm rounded-2xl flex items-center justify-center gap-3 transition-colors cursor-pointer"
-              id="auth-google-btn"
-            >
-              {/* Google multi-color G logo */}
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.24 21.36 7.34 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.17 0 9.98 0 12s.46 3.83 1.26 5.42l4.02-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.24 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>S'inscrire avec Google</span>
             </button>
           </div>
         </form>

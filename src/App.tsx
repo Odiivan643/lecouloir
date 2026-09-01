@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, ProductCategory, CartItem, UserProfile, FilterOptions } from './types';
-import { INITIAL_PRODUCTS } from './data/products';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CategoryTabs } from './components/CategoryTabs';
@@ -16,13 +15,15 @@ import { SearchView } from './components/SearchView';
 import { CartModal } from './components/CartModal';
 import { AuthModal } from './components/AuthModal';
 import { ProfileView } from './components/ProfileView';
+import { ClientOrdersView } from './components/ClientOrdersView';
 import { OverlayMenu } from './components/OverlayMenu';
 import { FilterModal } from './components/FilterModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { fetchMe, logout as apiLogout, fetchProducts as apiFetchProducts, fetchCategories as apiFetchCategories, updateMe, createProduct as apiCreateProduct, updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct, createCategory as apiCreateCategory, deleteCategory as apiDeleteCategory } from './lib/api';
 
-const CATEGORIES: ProductCategory[] = [
+const FALLBACK_CATEGORIES: ProductCategory[] = [
   'Tous',
   'Cahiers',
   'Geometrie',
@@ -44,18 +45,13 @@ export default function App() {
   // 1. État Admin (bien placé à l'intérieur du composant)
   const [isAdminView, setIsAdminView] = useState<boolean>(false);
 
-  // 2. État des produits modifiables
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  // 2. État des produits — source unique = backend (plus de mock)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
 
-  // 3. Catégories modifiables
-  const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([
-    { id: 'cahiers', label: 'Cahiers' },
-    { id: 'geometrie', label: 'Géométrie' },
-    { id: 'arts-creatifs', label: 'Arts créatifs' },
-    { id: 'sacs', label: 'Sacs' },
-    { id: 'ecriture', label: 'Écriture' },
-    { id: 'calculatrices', label: 'Calculatrices' },
-  ]);
+  // 3. Catégories — chargées depuis le backend, pas de mock en dur
+  const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([]);
 
   // Cart state
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -67,20 +63,14 @@ export default function App() {
     }
   });
 
-  // User state
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    try {
-      const saved = localStorage.getItem('lecouloir_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // User state — cookie httpOnly only (plus de localStorage)
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Navigation & Views
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Tous');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'profile'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'profile' | 'orders'>('home');
 
   // Modals
   const [showCartModal, setShowCartModal] = useState(false);
@@ -109,16 +99,52 @@ export default function App() {
     } catch {}
   }, [cart]);
 
-  // Sync user to localStorage
+  // Restauration session via cookie httpOnly
   useEffect(() => {
-    try {
-      if (user) {
-        localStorage.setItem('lecouloir_user', JSON.stringify(user));
-      } else {
-        localStorage.removeItem('lecouloir_user');
-      }
-    } catch {}
-  }, [user]);
+    fetchMe()
+      .then((u) => setUser(u as UserProfile))
+      .catch(() => setUser(null))
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  // Sync produits / catégories depuis l'API — plus de fallback mock
+  useEffect(() => {
+    let cancelled = false;
+    setProductsLoading(true);
+    setProductsError(null);
+    apiFetchProducts({ limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        if (res && Array.isArray(res.items)) {
+          setProducts(res.items);
+        } else {
+          setProducts([]);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setProductsError(err.message || 'Impossible de charger les produits.');
+        setProducts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+    apiFetchCategories()
+      .then((cats) => {
+        if (cancelled) return;
+        if (Array.isArray(cats)) {
+          setCategoryList(cats.map((c: any) => ({ id: c.id, label: c.label })));
+        } else {
+          setCategoryList([]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCategoryList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Cart actions
   const totalCartCount = useMemo(() => {
@@ -160,37 +186,78 @@ export default function App() {
     setCart([]);
   };
 
-  // Admin Actions
-  const handleAddProduct = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]);
-    triggerToast(`Article "${newProduct.name}" ajouté !`);
+  // Admin Actions — sécurisés via backend (require_admin cookie)
+  const handleAddProduct = async (newProduct: Product) => {
+    try {
+      const created: any = await apiCreateProduct({
+        name: newProduct.name,
+        subtitle: (newProduct as any).subtitle,
+        description: (newProduct as any).description,
+        price: newProduct.price,
+        category: (newProduct as any).category,
+        stockCount: (newProduct as any).stockCount ?? (newProduct as any).stock_quantity ?? 20,
+        images: (newProduct as any).images ?? ((newProduct as any).image ? [(newProduct as any).image] : undefined),
+        isPopular: (newProduct as any).isPopular,
+      });
+      setProducts((prev) => [created as Product, ...prev]);
+      triggerToast(`Article "${created.name}" ajouté !`);
+    } catch (e: any) {
+      triggerToast(e.message || 'Erreur création article (admin requis).');
+    }
   };
 
-  const handleEditProduct = (updatedProduct: Product) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-    );
-    triggerToast(`Article "${updatedProduct.name}" mis à jour !`);
+  const handleEditProduct = async (updatedProduct: Product) => {
+    try {
+      const saved: any = await apiUpdateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        subtitle: (updatedProduct as any).subtitle,
+        description: (updatedProduct as any).description,
+        price: updatedProduct.price,
+        category: (updatedProduct as any).category,
+        stockCount: (updatedProduct as any).stockCount ?? (updatedProduct as any).stock_quantity,
+        images: (updatedProduct as any).images ?? ((updatedProduct as any).image ? [(updatedProduct as any).image] : undefined),
+        isPopular: (updatedProduct as any).isPopular,
+      });
+      setProducts((prev) => prev.map((p) => (p.id === saved.id ? (saved as Product) : p)));
+      triggerToast(`Article "${saved.name}" mis à jour !`);
+    } catch (e: any) {
+      triggerToast(e.message || 'Erreur mise à jour.');
+    }
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
-    triggerToast('Article supprimé.');
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await apiDeleteProduct(productId);
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      triggerToast('Article supprimé.');
+    } catch (e: any) {
+      triggerToast(e.message || 'Erreur suppression (admin requis).');
+    }
   };
 
-  const handleAddCategory = (newCat: { id: string; label: string }) => {
-    setCategoryList((prev) => [...prev, newCat]);
-    triggerToast(`Catégorie "${newCat.label}" ajoutée !`);
+  const handleAddCategory = async (newCat: { id: string; label: string }) => {
+    try {
+      const created: any = await apiCreateCategory(newCat.label);
+      setCategoryList((prev) => [...prev, { id: created.id, label: created.label }]);
+      triggerToast(`Catégorie "${created.label}" ajoutée !`);
+    } catch (e: any) {
+      triggerToast(e.message || 'Erreur création catégorie.');
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
-    setCategoryList((prev) => prev.filter((c) => c.id !== categoryId));
-    triggerToast('Catégorie supprimée.');
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      await apiDeleteCategory(categoryId);
+      setCategoryList((prev) => prev.filter((c) => c.id !== categoryId));
+      triggerToast('Catégorie supprimée.');
+    } catch (e: any) {
+      triggerToast(e.message || 'Erreur suppression catégorie.');
+    }
   };
 
-  // Filtered and Sorted Products for Home
+  // Filtered and Sorted Products for Home — safe même si products est vide/undefined
   const displayedProducts = useMemo(() => {
-    let list = [...products];
+    let list = [...(products ?? [])];
 
     const catToUse =
       filterOptions.category !== 'Tous'
@@ -248,6 +315,30 @@ export default function App() {
     }
   };
 
+  const handleOpenOrders = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setActiveView('orders');
+  };
+
+  // Catégories dynamiques depuis le backend (+ "Tous")
+  const CATEGORIES: ProductCategory[] = useMemo(() => {
+    if (categoryList.length === 0) return FALLBACK_CATEGORIES;
+    // garde "Tous" en tête puis labels du backend castés en ProductCategory
+    return ['Tous' as ProductCategory, ...categoryList.map((c) => c.label as ProductCategory)];
+  }, [categoryList]);
+
+  // Guard admin — seul role admin peut voir le dashboard
+  const isAdmin = (user as any)?.role === 'admin';
+  useEffect(() => {
+    if (isAdminView && !isAdmin) {
+      setIsAdminView(false);
+      triggerToast('Accès admin requis.');
+    }
+  }, [isAdminView, isAdmin]);
+
   const activeFilterCount =
     (filterOptions.category !== 'Tous' ? 1 : 0) +
     (filterOptions.maxPrice < 10000 ? 1 : 0) +
@@ -299,17 +390,29 @@ export default function App() {
           onAddToCart={(p, qty) => handleAddToCart(p, qty)}
           onBuyNow={handleBuyNowFromDetail}
         />
+      ) : activeView === 'orders' && user ? (
+        <ClientOrdersView onBack={() => setActiveView('profile')} />
       ) : activeView === 'profile' && user ? (
         <ProfileView
           user={user}
           onBack={() => setActiveView('home')}
-          onSave={(updated) => {
-            setUser(updated);
-            triggerToast('Profil mis à jour avec succès');
+          onOpenOrders={handleOpenOrders}
+          onSave={async (updated) => {
+            try {
+              const saved = await updateMe(updated);
+              setUser(saved as UserProfile);
+              triggerToast('Profil mis à jour avec succès');
+            } catch (e: any) {
+              // fallback local si API down
+              setUser(updated);
+              triggerToast(e.message || 'Erreur mise à jour');
+            }
           }}
-          onLogout={() => {
+          onLogout={async () => {
+            try {
+              await apiLogout();
+            } catch {}
             setUser(null);
-            localStorage.removeItem('lecouloir_user');
             setActiveView('home');
             triggerToast('Déconnecté avec succès');
           }}
@@ -354,11 +457,40 @@ export default function App() {
                       : `Fournitures : ${selectedCategory}`}
                   </h2>
                   <span className="text-xs text-neutral-500 font-medium">
-                    {displayedProducts.length} article{displayedProducts.length > 1 ? 's' : ''}
+                    {productsLoading ? 'Chargement…' : `${displayedProducts.length} article${displayedProducts.length > 1 ? 's' : ''}`}
                   </span>
                 </div>
 
-                {displayedProducts.length === 0 ? (
+                {productsLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 animate-pulse">
+                        <div className="w-full aspect-4/3 bg-neutral-100 rounded-xl mb-3.5" />
+                        <div className="h-4 bg-neutral-100 rounded w-3/4 mb-2" />
+                        <div className="h-3 bg-neutral-100 rounded w-1/2 mb-3" />
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="h-4 bg-neutral-100 rounded w-16" />
+                          <div className="w-8 h-8 bg-neutral-100 rounded-lg" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-16 bg-neutral-50 rounded-2xl border border-neutral-200 p-6">
+                    <p className="text-sm font-semibold text-neutral-800 mb-2">
+                      Aucun produit disponible pour le moment.
+                    </p>
+                    <p className="text-xs text-neutral-500 mb-4">
+                      {productsError ? `API: ${productsError}` : 'Le catalogue est vide côté serveur.'}
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      Réessayer
+                    </button>
+                  </div>
+                ) : displayedProducts.length === 0 ? (
                   <div className="text-center py-16 bg-neutral-50 rounded-2xl border border-neutral-200 p-6">
                     <p className="text-sm font-semibold text-neutral-800 mb-2">
                       Aucun produit ne correspond à vos filtres.
@@ -392,7 +524,7 @@ export default function App() {
           <Footer />
         </div>
       )}
-{/* Overlay Menu Drawer */}
+    {/* Overlay Menu Drawer */}
       {showOverlayMenu && (
         <OverlayMenu
           onClose={() => setShowOverlayMenu(false)}
@@ -401,10 +533,22 @@ export default function App() {
             setShowOverlayMenu(false);
             handleProfileButtonClick();
           }}
-          onOpenAdmin={() => {
-            setShowOverlayMenu(false);
-            setIsAdminView(true);
-          }}
+          onOpenOrders={
+            user
+              ? () => {
+                  setShowOverlayMenu(false);
+                  handleOpenOrders();
+                }
+              : undefined
+          }
+          onOpenAdmin={
+            isAdmin
+              ? () => {
+                  setShowOverlayMenu(false);
+                  setIsAdminView(true);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -462,6 +606,7 @@ export default function App() {
             handleClearCart();
             triggerToast('Commande confirmée avec succès !');
           }}
+          onViewOrders={() => setActiveView('orders')}
         />
       )}
     </div>
