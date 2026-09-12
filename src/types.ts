@@ -1,10 +1,10 @@
 export type ProductCategory =
   | 'Tous'
   | 'Cahiers'
-  | 'Geometrie'
-  | 'Arts creatifs'
+  | 'Géométrie'
+  | 'Arts créatifs'
   | 'Sacs'
-  | 'Ecriture'
+  | 'Écriture'
   | 'Calculatrices';
 
 export interface ProductSpec {

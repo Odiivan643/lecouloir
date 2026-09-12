@@ -26,10 +26,10 @@ import { fetchMe, logout as apiLogout, fetchProducts as apiFetchProducts, fetchC
 const FALLBACK_CATEGORIES: ProductCategory[] = [
   'Tous',
   'Cahiers',
-  'Geometrie',
-  'Arts creatifs',
+  'Géométrie',
+  'Arts créatifs',
   'Sacs',
-  'Ecriture',
+  'Écriture',
   'Calculatrices',
 ];
 
