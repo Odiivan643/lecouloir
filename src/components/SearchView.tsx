@@ -97,7 +97,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         {/* Header matching Recherche.png */}
         <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
           <div className="flex items-center gap-2 text-base font-bold text-black">
-            <span>LeCouloir</span>
+            <span>Tout là</span>
             <span className="text-neutral-400 font-light">|</span>
             <span className="font-semibold text-neutral-800">Recherche</span>
           </div>

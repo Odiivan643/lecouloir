@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
               <p className="text-neutral-300">
                 WhatsApp :{' '}
                 <a
-                  href="https://wa.me/2250102030405"
+                  href="https://wa.me/2250142847666"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-blue-400 underline transition-colors"
@@ -26,10 +26,10 @@ export const Footer: React.FC = () => {
               <p className="text-neutral-300">
                 Courriel :{' '}
                 <a
-                  href="mailto:contact@lecouloir.ci"
+                  href="mailto:info@tout-la.com"
                   className="hover:text-blue-400 underline transition-colors"
                 >
-                  contact@lecouloir.ci
+                  info@tout-la.com
                 </a>
               </p>
               <button
@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Page Facebook LeCouloir"
+                aria-label="Page Facebook Tout là"
                 className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@ export const Footer: React.FC = () => {
                 href="https://tiktok.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Compte TikTok LeCouloir"
+                aria-label="Compte TikTok Tout là"
                 className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-neutral-800 hover:text-white transition-colors"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -73,7 +73,7 @@ export const Footer: React.FC = () => {
 
           {/* Copyright line */}
           <div className="text-center pt-4 border-t border-neutral-800 text-xs text-neutral-400 font-medium">
-            ©2026 LeCouloir Copyright.
+            ©2026 Tout là Copyright.
           </div>
         </div>
       </footer>
@@ -82,10 +82,10 @@ export const Footer: React.FC = () => {
       {showPrivacyModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white text-black rounded-2xl max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-black mb-3">Politique de Confidentialité - LeCouloir</h3>
+            <h3 className="text-lg font-bold text-black mb-3">Politique de Confidentialité - Tout là</h3>
             <div className="text-sm text-neutral-700 space-y-3 leading-relaxed">
               <p>
-                Chez <strong>LeCouloir</strong>, la protection de vos données personnelles est une priorité absolue.
+                Chez <strong>Tout là</strong>, la protection de vos données personnelles est une priorité absolue.
               </p>
               <p>
                 <strong>1. Données collectées :</strong> Nous collectons uniquement les informations nécessaires au traitement de vos commandes (Nom, prénom, numéro de téléphone, adresse de livraison, email).

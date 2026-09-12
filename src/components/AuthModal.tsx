@@ -74,8 +74,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="text-center mt-2 mb-8 px-2">
           <h2 className="text-lg md:text-xl font-bold text-black leading-snug">
             {isRegister
-              ? 'Créez votre compte LeCouloir'
-              : 'Connectez-vous à votre compte LeCouloir'}
+              ? 'Créez votre compte Tout là'
+              : 'Connectez-vous à votre compte Tout là'}
           </h2>
           <p className="text-xs text-neutral-500 mt-1">
             Librairie & fournitures scolaires en ligne

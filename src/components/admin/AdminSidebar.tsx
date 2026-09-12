@@ -28,9 +28,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <div>
         <div className="mb-6 px-2">
           <span className="text-[10px] font-extrabold tracking-widest text-blue-600 uppercase">
-            LECOULOIR ADMIN
+            Tout là ADMIN
           </span>
-          <h2 className="text-xl font-extrabold text-neutral-900">LECOULOIR</h2>
+          <h2 className="text-xl font-extrabold text-neutral-900">Tout là</h2>
         </div>
 
         <nav className="space-y-1.5">

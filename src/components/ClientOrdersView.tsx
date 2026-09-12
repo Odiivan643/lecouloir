@@ -229,7 +229,7 @@ export const ClientOrdersView: React.FC<ClientOrdersViewProps> = ({ onBack }) =>
 
             <div className="flex gap-2">
               <a
-                href={`https://wa.me/2250102030405?text=${encodeURIComponent(`Bonjour LeCouloir, suivi de ma commande ${selected.id} (${selected.total} FCFA).`)}`}
+                href={`https://wa.me/2250102030405?text=${encodeURIComponent(`Bonjour Tout là, suivi de ma commande ${selected.id} (${selected.total} FCFA).`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2"

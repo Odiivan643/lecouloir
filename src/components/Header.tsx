@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="text-xl md:text-2xl font-bold tracking-tight text-black hover:opacity-85 transition-opacity text-left cursor-pointer"
           id="header-brand-logo"
         >
-          LeCouloir
+          Tout là
         </button>
 
         {/* Right Actions */}

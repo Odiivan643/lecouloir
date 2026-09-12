@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Truck, ShieldCheck, MapPin, Phone, User, MessageCircle } from 'lucide-react';
+import { X, CheckCircle2, Truck, ShieldCheck, MapPin, Phone, User, MessageCircle, Mail } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem, UserProfile } from '../types';
 import { createOrder } from '../lib/api';
@@ -23,6 +23,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     user ? `${user.firstName} ${user.lastName}`.trim() : ''
   );
   const [phone, setPhone] = useState(user?.phone || '');
+  const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [city, setCity] = useState('Abidjan - Cocody');
   const [deliveryAddress, setDeliveryAddress] = useState(user?.address || '');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'wave' | 'om' | 'momo'>('cod');
@@ -55,6 +56,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const res: any = await createOrder({
         fullName: fullName.trim(),
         phone: phone.trim(),
+        email: customerEmail.trim() || undefined,
         city,
         deliveryAddress: deliveryAddress.trim(),
         paymentMethod,
@@ -153,6 +155,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                    Adresse E-mail <span className="text-neutral-400 font-normal">(optionnel — pour le suivi de commande)</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5" />
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="Ex: nom@email.com"
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-blue-600 outline-hidden font-medium"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-neutral-700 block mb-1">
@@ -206,7 +224,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       desc: 'Espèces à la remise du colis',
                       tag: 'Populaire',
                     },
-                    {
+                   /* {
                       id: 'wave',
                       label: 'Wave Mobile Money',
                       desc: 'Sans frais',
@@ -221,7 +239,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       id: 'momo',
                       label: 'MTN Mobile Money',
                       desc: 'Instantané',
-                    },
+                    },*/
                   ].map((method) => (
                     <button
                       key={method.id}
@@ -319,7 +337,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="flex flex-col gap-2.5">
               <a
                 href={`https://wa.me/2250102030405?text=${encodeURIComponent(
-                  `Bonjour LeCouloir, je confirme ma commande ${orderId} pour un montant de ${displayTotal} FCFA à l'attention de ${fullName}.`
+                  `Bonjour Tout là, je confirme ma commande ${orderId} pour un montant de ${displayTotal} FCFA à l'attention de ${fullName}.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

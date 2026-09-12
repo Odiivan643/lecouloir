@@ -29,7 +29,7 @@ export const CartModal: React.FC<CartModalProps> = ({
         {/* Top Header matching Panier.png */}
         <div className="px-5 py-4 flex items-center justify-between border-b border-neutral-200">
           <div className="flex items-center gap-2 text-base font-bold text-black">
-            <span>LeCouloir</span>
+            <span>Tout là</span>
             <span className="text-neutral-400 font-light">|</span>
             <span className="font-semibold text-neutral-800">Panier</span>
           </div>

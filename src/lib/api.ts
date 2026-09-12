@@ -1,5 +1,5 @@
 /**
- * LeCouloir API client — cookie httpOnly Secure only
+ * Tout là API client — cookie httpOnly Secure only
  * Auth via httpOnly cookie (plus de Bearer en localStorage).
  * Toutes les requêtes authentifiées utilisent `credentials: 'include'`.
  */
@@ -91,6 +91,7 @@ export async function createOrder(payload: {
   fullName?: string;
   customer?: { fullName: string; phone: string; email?: string };
   phone?: string;
+  email?: string;
   city: string;
   deliveryAddress: string;
   paymentMethod: string;
