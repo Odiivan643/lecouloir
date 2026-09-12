@@ -20,11 +20,11 @@ export const OverlayMenu: React.FC<OverlayMenuProps> = ({
 }) => {
   const menuItems: { label: string; category?: ProductCategory; action?: () => void }[] = [
     { label: 'Sacs', category: 'Sacs' },
-    { label: 'Geometrie', category: 'Geometrie' },
+    { label: 'Geometrie', category: 'Géométrie' },
     { label: 'Cahier', category: 'Cahiers' },
     { label: 'Calculatrices', category: 'Calculatrices' },
-    { label: 'Arts creatifs', category: 'Arts creatifs' },
-    { label: 'Ecriture', category: 'Ecriture' },
+    { label: 'Arts creatifs', category: 'Arts créatifs' },
+    { label: 'Ecriture', category: 'Écriture' },
     { label: 'Consulter mon profil', action: onOpenProfile },
     ...(onOpenOrders ? [{ label: 'Mes commandes', action: onOpenOrders }] : []),
     ...(onOpenAdmin ? [{ label: 'Espace Admin', action: onOpenAdmin }] : []),
