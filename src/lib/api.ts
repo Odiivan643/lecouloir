@@ -133,4 +133,25 @@ export async function deleteCategory(id: string) {
   return apiFetch(`/api/categories/${id}`, { method: 'DELETE' });
 }
 
+// -- Upload images (Cloudflare R2 via backend)
+export async function uploadImage(file: File): Promise<{ url: string; key: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  // Ne pas mettre de Content-Type : le navigateur gère le multipart + boundary
+  const res = await fetch(`${BASE_URL}/api/uploads/images`, {
+    method: 'POST',
+    body: form,
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(body.detail || `Upload ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteUploadedImage(url: string) {
+  return apiFetch(`/api/uploads/images?url=${encodeURIComponent(url)}`, { method: 'DELETE' });
+}
+
 export { BASE_URL };

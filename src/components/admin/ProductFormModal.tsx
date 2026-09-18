@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Loader2 } from 'lucide-react';
 import { Product } from '../../types';
+import { uploadImage, deleteUploadedImage } from '../../lib/api';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -22,7 +23,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('24');
   const [category, setCategory] = useState('cahiers');
-  const [imageDataUrl, setImageDataUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,32 +35,62 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPrice(String(editingProduct.price));
       setStock(String((editingProduct as any).stockCount ?? 20));
       setCategory(editingProduct.category);
-      setImageDataUrl((editingProduct as any).image || '');
+      setImageUrl((editingProduct as any).image || '');
     } else {
       setName('');
       setSubtitle('');
       setPrice('');
       setStock('24');
       setCategory(categories[0]?.id || 'cahiers');
-      setImageDataUrl('');
+      setImageUrl('');
     }
+    setUploadError(null);
   }, [editingProduct, categories, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("L'image est trop volumineuse (max 5 Mo)");
-        return;
-      }
+  const toDataUrl = (file: File) =>
+    new Promise<string>((resolve) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        setImageDataUrl(reader.result as string);
-      };
+      reader.onload = () => resolve(reader.result as string);
       reader.readAsDataURL(file);
+    });
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("L'image est trop volumineuse (max 5 Mo)");
+      return;
     }
+    setUploadError(null);
+    setUploading(true);
+    // supprime l'ancienne image R2 si on la remplace
+    if (imageUrl && imageUrl.startsWith('http')) {
+      deleteUploadedImage(imageUrl).catch(() => {});
+    }
+    try {
+      const res = await uploadImage(file);
+      setImageUrl(res.url);
+    } catch (err: any) {
+      // Fallback dev (R2 non configuré) : data URL locale
+      const dataUrl = await toDataUrl(file);
+      setImageUrl(dataUrl);
+      setUploadError(
+        (err?.message || 'Upload R2 indisponible') + ' — image stockée localement (temporaire).'
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (imageUrl && imageUrl.startsWith('http')) {
+      deleteUploadedImage(imageUrl).catch(() => {});
+    }
+    setImageUrl('');
+    setUploadError(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,7 +98,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     if (!name.trim() || !price) return;
 
     const finalImage =
-      imageDataUrl.trim() ||
+      imageUrl.trim() ||
       'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80';
 
     const payload: any = {
@@ -177,9 +210,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               className="hidden"
             />
 
-            {imageDataUrl ? (
+            {uploading ? (
+              <div className="w-full h-32 border border-neutral-200 bg-neutral-50 rounded-2xl flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                <p className="font-bold text-neutral-700">Envoi de l'image…</p>
+              </div>
+            ) : imageUrl ? (
               <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-neutral-200 bg-neutral-100 group">
-                <img src={imageDataUrl} alt="Aperçu" className="w-full h-full object-contain" />
+                <img src={imageUrl} alt="Aperçu" className="w-full h-full object-contain" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <button
                     type="button"
@@ -190,7 +228,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setImageDataUrl('')}
+                    onClick={handleRemoveImage}
                     className="px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl shadow-xs"
                   >
                     Supprimer
@@ -207,6 +245,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <p className="text-[10px] text-neutral-400">Format PNG, JPG ou WEBP (Max 5 Mo)</p>
               </div>
             )}
+
+            {uploadError && (
+              <p className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                {uploadError}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-2 pt-3">
@@ -219,9 +263,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20"
+              disabled={uploading}
+              className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Enregistrer l'article
+              {uploading ? 'Patientez…' : "Enregistrer l'article"}
             </button>
           </div>
         </form>

@@ -20,7 +20,7 @@ export const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   className="hover:text-blue-400 underline transition-colors"
                 >
-                  +225 01 02 03 04 05
+                  +225 01 42 84 76 66
                 </a>
               </p>
               <p className="text-neutral-300">

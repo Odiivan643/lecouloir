@@ -21,8 +21,8 @@ interface RecommendationItem {
 const RECOMMENDATIONS: RecommendationItem[] = [
   {
     id: 'rec-ecriture',
-    title: 'Ecriture',
-    category: 'Ecriture',
+    title: 'Écriture',
+    category: 'Écriture',
     subtitle: 'Stylos, crayons, feutres',
     iconType: 'pen',
   },
@@ -35,8 +35,8 @@ const RECOMMENDATIONS: RecommendationItem[] = [
   },
   {
     id: 'rec-geometrie',
-    title: 'Geometrie',
-    category: 'Geometrie',
+    title: 'Géométrie',
+    category: 'Géométrie',
     subtitle: 'Regles, compas',
     iconType: 'geometry',
   },
@@ -57,7 +57,7 @@ const RECOMMENDATIONS: RecommendationItem[] = [
   {
     id: 'rec-arts',
     title: 'Arts Créatifs',
-    category: 'Arts creatifs',
+    category: 'Arts créatifs',
     subtitle: 'Peinture, coloriage',
     iconType: 'art',
   },
