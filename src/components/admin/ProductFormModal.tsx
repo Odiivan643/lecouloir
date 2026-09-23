@@ -162,7 +162,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 type="number"
                 required
                 min="50"
-                step="50"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="2000"

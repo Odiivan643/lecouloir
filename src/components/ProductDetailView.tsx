@@ -62,7 +62,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <img
             src={product.images[activeImageIndex] || product.images[0]}
             alt={product.name}
-            className="w-full h-full object-cover transition-opacity duration-300"
+            className="w-full h-full object-contain transition-opacity duration-300"
             referrerPolicy="no-referrer"
           />
 
